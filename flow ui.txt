@@ -1,0 +1,22 @@
+flow:
+buka apk p1 -> p2.
+
+klik icon sound untuk lihat detail(p2) -> p5
+
+buka mymix di p2 untuk ke p3 atau ke p4(belum ada mix)
+
+klik edit icon di p3 -> ke p7
+
+p7 klik delete muncul pop up.
+
+p7 klik edit -> p8
+
+p8 klik sound -> p9
+
+p4 klik + -> p6
+
+p6 klik + -> p10
+
+p10 pilih sound -> p11 atur volume -> add to mix
+
+tambahkan juga buat login dan logout di srs dan uinya
