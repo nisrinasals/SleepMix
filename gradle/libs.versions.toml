@@ -9,7 +9,7 @@ lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.12.1"
 composeBom = "2024.09.00"
 room = "2.8.4"
-kspver = "2.2.0-1.0.20"
+kspver = "2.2.10-2.0.2"
 media3Exoplayer = "1.8.0"
 
 [libraries]
