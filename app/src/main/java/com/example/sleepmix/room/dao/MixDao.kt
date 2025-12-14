@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.example.sleepmix.room.Mix
 import com.example.sleepmix.room.MixWithSounds
@@ -23,11 +24,13 @@ interface MixDao {
     suspend fun delete(mix: Mix)
 
     // Menggunakan Flow agar data di MyMix List (View MyMix) selalu ter-update secara real-time
+    @Transaction
     @Query("SELECT * FROM tblMix WHERE userId = :userId")
     fun getMixesByUserIdStream(userId: Int): Flow<List<MixWithSounds>>
 // TIDAK PERLU lagi menggunakan suspend fun getMixByUser, ganti dengan Flow di atas
 
     // Mengambil Mix lengkap beserta MixSound untuk halaman Mix Detail/Edit
+    @Transaction
     @Query("SELECT * FROM tblMix WHERE mixId = :mixId")
     fun getMixWithSoundsById(mixId: Int): Flow<MixWithSounds?>
 // TIDAK PERLU lagi menggunakan suspend fun getMixById, ganti dengan Flow di atas

@@ -2,6 +2,7 @@ package com.example.sleepmix.room
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
@@ -19,6 +20,10 @@ import androidx.room.PrimaryKey
             childColumns = ["soundId"],
             onDelete = ForeignKey.CASCADE
         )
+    ],
+    indices = [
+        Index(value = ["mixId"]),
+        Index(value = ["soundId"])
     ]
 )
 data class MixSound(

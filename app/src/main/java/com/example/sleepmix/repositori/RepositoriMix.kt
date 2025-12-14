@@ -20,6 +20,11 @@ interface MixRepository {
 
     // Menggabungkan DELETE Mix & MixSound dalam satu transaksi
     suspend fun deleteMix(mix: Mix)
+
+    /**
+     * Memperbarui MixSound tunggal (digunakan untuk menyimpan perubahan volume).
+     */
+    suspend fun updateMixSound(mixSound: MixSound)
 }
 
 class OfflineMixRepository(
@@ -72,5 +77,11 @@ class OfflineMixRepository(
 
         // 2. Hapus Mix utama
         mixDao.delete(mix)
+    }
+
+    @Transaction
+    override suspend fun updateMixSound(mixSound: MixSound) {
+        // Memanggil fungsi update dari MixSoundDao
+        mixSoundDao.updateMixSound(mixSound)
     }
 }

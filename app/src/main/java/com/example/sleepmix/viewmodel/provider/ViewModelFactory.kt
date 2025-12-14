@@ -31,10 +31,14 @@ class LoginViewModelFactory(private val userRepository: UserRepository) : ViewMo
 class MixDetailViewModelFactory(
     private val mixRepository: MixRepository
 ) : ViewModelProvider.Factory {
+
+    // Metode utama untuk membuat instance ViewModel
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MixDetailViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MixDetailViewModel(mixRepository) as T
+            return MixDetailViewModel(
+                mixRepository = mixRepository
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

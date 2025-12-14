@@ -40,6 +40,13 @@ class MixPlaybackService : Service() {
         return START_STICKY // Service akan dimulai ulang jika dimatikan sistem
     }
 
+    fun stopAll() {
+        audioController.stopAllPlayers() // Hentikan semua player di controller
+        // Hentikan Foreground Service dan hapus notifikasi
+        stopForeground(STOP_FOREGROUND_DETACH)
+        stopSelf() // Hentikan Service sepenuhnya
+    }
+
     override fun onDestroy() {
         serviceScope.cancel()
         audioController.stopAllPlayers()

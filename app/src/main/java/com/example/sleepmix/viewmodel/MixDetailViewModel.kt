@@ -10,7 +10,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sleepmix.media.MixPlaybackService
 import com.example.sleepmix.repositori.MixRepository
-
 import com.example.sleepmix.room.MixSound
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -104,15 +103,16 @@ class MixDetailViewModel(
 
     // Aksi: Menyesuaikan Volume (Dipanggil dari Slider UI)
     fun updateMixSoundVolume(mixSound: MixSound, newVolume: Float) = viewModelScope.launch {
-        // 1. Kirim perintah volume real-time ke Service
+
+        // 1. Kirim perintah volume real-time ke Service (AudioController)
         mixPlaybackService?.setSoundVolume(mixSound, newVolume)
 
         // 2. Simpan volume baru ke Database (Persistence)
-        // **PERLU: Tambahkan fungsi updateMixSound(MixSound) di MixRepository**
+        // Gunakan Float untuk volume level (membutuhkan koreksi tipe data di MixSound.kt)
         val updatedMixSound = mixSound.copy(volumeLevel = newVolume)
-        // mixRepository.updateMixSound(updatedMixSound)
+        mixRepository.updateMixSound(updatedMixSound)
 
-        // Untuk sementara, kita hanya update data lokal (UI State) sampai repository diperbarui:
+        // 3. Update data lokal (UI State)
         _uiState.update { currentState ->
             val updatedSounds = currentState.mixWithSounds?.sounds?.map { s ->
                 if (s.mixSoundId == mixSound.mixSoundId) updatedMixSound else s
