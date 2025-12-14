@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.compose.icons)
     //Room
     implementation(libs.bundles.room)
+    implementation(libs.androidx.media3.exoplayer)
     ksp(libs.room.compiler)
     //ViewModel
     implementation(libs.lifecycle.viewmodel.compose)
