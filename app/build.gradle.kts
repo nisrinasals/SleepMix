@@ -62,8 +62,10 @@ dependencies {
     //ViewModel
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.runtime.compose)
-    // Navigasi
+    //Navigasi
     implementation(libs.navigation.compose)
+
+    implementation(libs.exoplayer)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
