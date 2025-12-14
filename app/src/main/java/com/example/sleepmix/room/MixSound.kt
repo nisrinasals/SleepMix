@@ -26,5 +26,5 @@ data class MixSound(
     val mixSoundId: Int = 0,
     val mixId: Int,
     val soundId: Int,
-    val volumeLevel: Int
+    val volumeLevel: Float
 )

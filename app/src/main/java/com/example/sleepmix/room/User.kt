@@ -9,6 +9,6 @@ data class User(
     val userId : Int = 0,
     val nama : String,
     val email : String,
-    val password : String,
+    val passwordHash : String,
     val isLoggedIn : Boolean
 )

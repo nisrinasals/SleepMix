@@ -17,8 +17,6 @@ interface UserDao {
     @Update
     suspend fun updateUser(user: User)
 
-    @Delete
-    suspend fun deleteUser(user: User)
 
     @Query("SELECT * FROM tblUser WHERE email = :email LIMIT 1")
     suspend fun getUserByEmail(email: String): User?
