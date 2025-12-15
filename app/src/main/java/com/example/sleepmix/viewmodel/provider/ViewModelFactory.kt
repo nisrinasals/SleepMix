@@ -5,11 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.sleepmix.repositori.MixRepository
 import com.example.sleepmix.repositori.SoundRepository
 import com.example.sleepmix.repositori.UserRepository
-import com.example.sleepmix.viewmodel.CreateMixViewModel
-import com.example.sleepmix.viewmodel.LoginViewModel
-import com.example.sleepmix.viewmodel.MixDetailViewModel
-import com.example.sleepmix.viewmodel.MyMixViewModel
-import com.example.sleepmix.viewmodel.RegistrasiViewModel
+import com.example.sleepmix.viewmodel.*
 
 class RegistrasiViewModelFactory(private val userRepository: UserRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -34,14 +30,10 @@ class LoginViewModelFactory(private val userRepository: UserRepository) : ViewMo
 class MixDetailViewModelFactory(
     private val mixRepository: MixRepository
 ) : ViewModelProvider.Factory {
-
-    // Metode utama untuk membuat instance ViewModel
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MixDetailViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MixDetailViewModel(
-                mixRepository = mixRepository
-            ) as T
+            return MixDetailViewModel(mixRepository = mixRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
@@ -63,8 +55,6 @@ class CreateMixViewModelFactory(
     }
 }
 
-// File: com.example.sleepmix.viewmodel.MyMixViewModelFactory.kt
-
 class MyMixViewModelFactory(
     private val mixRepository: MixRepository,
     private val userRepository: UserRepository
@@ -75,6 +65,34 @@ class MyMixViewModelFactory(
             return MyMixViewModel(
                 mixRepository = mixRepository,
                 userRepository = userRepository
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class BrowseSoundViewModelFactory(
+    private val soundRepository: SoundRepository
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(BrowseSoundViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return BrowseSoundViewModel(soundRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class EditMixViewModelFactory(
+    private val mixRepository: MixRepository,
+    private val soundRepository: SoundRepository
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(EditMixViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return EditMixViewModel(
+                mixRepository = mixRepository,
+                soundRepository = soundRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

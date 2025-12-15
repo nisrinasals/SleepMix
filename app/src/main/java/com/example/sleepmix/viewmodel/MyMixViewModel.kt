@@ -75,4 +75,7 @@ class MyMixViewModel(
             }
         }
     }
+    fun logout() = viewModelScope.launch {
+        userRepository.clearUserSession()
+    }
 }

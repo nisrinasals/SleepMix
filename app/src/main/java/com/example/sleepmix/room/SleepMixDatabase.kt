@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
         Mix::class,
         MixSound::class
     ],
-    version = 1,
+    version = 2,  // INCREASED VERSION untuk force re-create
     exportSchema = false
 )
 abstract class SleepMixDatabase : RoomDatabase() {
@@ -38,6 +38,7 @@ abstract class SleepMixDatabase : RoomDatabase() {
                     SleepMixDatabase::class.java,
                     "sleepmix_database"
                 )
+                    .fallbackToDestructiveMigration()  // IMPORTANT: Re-create database on version change
                     .addCallback(SleepMixDatabaseCallback(context))
                     .build()
                 INSTANCE = instance
@@ -45,20 +46,15 @@ abstract class SleepMixDatabase : RoomDatabase() {
             }
         }
     }
+
     private class SleepMixDatabaseCallback(private val context: Context) : RoomDatabase.Callback() {
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
 
-            // Jalankan seeding di Coroutine Scope terpisah
-            // Gunakan IO Dispatcher karena ini adalah operasi I/O database
             CoroutineScope(Dispatchers.IO).launch {
-                // Mendapatkan INSTANCE database yang baru dibuat
                 val database = INSTANCE ?: return@launch
-
-                // Ambil DAO Sound
                 val soundDao = database.soundDao()
 
-                // Masukkan data Sound awal
                 val initialSounds = SoundSeeds.populateInitialSounds(context)
                 soundDao.insertAll(initialSounds)
             }
@@ -67,40 +63,46 @@ abstract class SleepMixDatabase : RoomDatabase() {
 }
 
 object SoundSeeds {
-    // Fungsi untuk mendapatkan ID resource dari nama file di folder 'raw'
-    // Menggunakan Context untuk resolve ID
+    /**
+     * Get resource ID from raw folder
+     */
     fun getRawResourceId(context: Context, name: String): Int {
-        // resource type 'raw' dan package name dari aplikasi
         return context.resources.getIdentifier(name, "raw", context.packageName)
     }
 
-    // Fungsi untuk mendapatkan ID resource dari nama file di folder 'drawable'
+    /**
+     * Get resource ID from drawable folder
+     */
     fun getDrawableResourceId(context: Context, name: String): Int {
-        // resource type 'drawable'
         return context.resources.getIdentifier(name, "drawable", context.packageName)
     }
 
+    /**
+     * Populate initial sounds dengan file path yang BENAR
+     */
     fun populateInitialSounds(context: Context): List<Sound> {
         val sounds = listOf(
-            Triple("Bird", "bird", "bird"), // Name, raw_file_name, drawable_file_name
-            Triple("Cricket", "crickets", "cricket"),
+            Triple("Bird", "bird", "bird"),
+            Triple("Cricket", "crickets", "cricket"),  // Note: audio = "crickets" but icon = "cricket"
             Triple("Rain", "rain", "rain"),
             Triple("Sea Waves", "sea", "sea"),
             Triple("Thunderstorm", "thunder", "thunder")
         )
 
-        return sounds.mapIndexed { index, data ->
-            val name = data.first
-            val rawFileName = data.second
-            val drawableFileName = data.third
+        return sounds.mapIndexed { index, (name, rawFileName, drawableFileName) ->
+            val rawResId = getRawResourceId(context, rawFileName)
+            val drawableResId = getDrawableResourceId(context, drawableFileName)
+
+            // CRITICAL FIX: Use correct URI format
+            // Format LAMA (SALAH): "android.resource://package/resId"
+            // Format BARU (BENAR): "android.resource://package/raw/resId"
+            val filePath = "android.resource://${context.packageName}/${rawResId}"
 
             Sound(
-                // SoundId 1, 2, 3...
                 soundId = index + 1,
                 name = name,
-                // filePath akan disimpan sebagai string resource path untuk digunakan oleh Media Player
-                filePath = "android.resource://${context.packageName}/${getRawResourceId(context, rawFileName)}",
-                iconRes = getDrawableResourceId(context, drawableFileName) // resource ID untuk Composable
+                filePath = filePath,
+                iconRes = drawableResId
             )
         }
     }
