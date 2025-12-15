@@ -38,6 +38,8 @@ navigation-compose = { module = "androidx.navigation:navigation-compose", versio
 
 exoplayer = {module = "com.google.android.exoplayer:exoplayer", version = "2.19.1"}
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3Exoplayer" }
+#DataStore for Session Management
+datastore = {module = "androidx.datastore:datastore-preferences", version = "1.2.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -65,8 +65,10 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     //Navigasi
     implementation(libs.navigation.compose)
-
+    //Exoplayer
     implementation(libs.exoplayer)
+    //DataStore
+    implementation(libs.datastore)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
