@@ -8,6 +8,7 @@ import com.example.sleepmix.repositori.UserRepository
 import com.example.sleepmix.viewmodel.CreateMixViewModel
 import com.example.sleepmix.viewmodel.LoginViewModel
 import com.example.sleepmix.viewmodel.MixDetailViewModel
+import com.example.sleepmix.viewmodel.MyMixViewModel
 import com.example.sleepmix.viewmodel.RegistrasiViewModel
 
 class RegistrasiViewModelFactory(private val userRepository: UserRepository) : ViewModelProvider.Factory {
@@ -56,6 +57,24 @@ class CreateMixViewModelFactory(
             return CreateMixViewModel(
                 mixRepository = mixRepository,
                 soundRepository = soundRepository
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+// File: com.example.sleepmix.viewmodel.MyMixViewModelFactory.kt
+
+class MyMixViewModelFactory(
+    private val mixRepository: MixRepository,
+    private val userRepository: UserRepository
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MyMixViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return MyMixViewModel(
+                mixRepository = mixRepository,
+                userRepository = userRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
