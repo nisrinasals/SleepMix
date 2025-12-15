@@ -1,5 +1,6 @@
 package com.example.sleepmix.viewmodel
 
+import android.annotation.SuppressLint
 import com.example.sleepmix.room.MixWithSounds
 import android.content.ComponentName
 import android.content.Context
@@ -33,6 +34,7 @@ class MixDetailViewModel(
     val uiState: StateFlow<MixDetailUiState> = _uiState.asStateFlow()
 
     // Service Audio
+    @SuppressLint("StaticFieldLeak")
     private var mixPlaybackService: MixPlaybackService? = null
 
     // ID Mix yang sedang di-load

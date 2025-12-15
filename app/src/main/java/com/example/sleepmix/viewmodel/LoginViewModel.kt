@@ -63,6 +63,7 @@ class LoginViewModel(private val userRepository: UserRepository) : ViewModel() {
                 // 3. Pastikan semua user lain logout, lalu update status login user ini
                 userRepository.logoutAll()
                 userRepository.updateUser(user.copy(isLoggedIn = true))
+                userRepository.saveSession(user.userId)
 
                 // 4. Success
                 _uiState.update {

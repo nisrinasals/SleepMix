@@ -2,6 +2,8 @@ package com.example.sleepmix.repositori
 
 import com.example.sleepmix.room.User
 import com.example.sleepmix.room.dao.UserDao
+import com.example.sleepmix.util.SessionManager
+import kotlinx.coroutines.flow.Flow
 
 
 interface UserRepository {
@@ -10,9 +12,16 @@ interface UserRepository {
     suspend fun getUserByEmail(email: String): User?
     suspend fun getUserById(id: Int): User?
     suspend fun logoutAll()
+
+    suspend fun saveSession(userId: Int)
+    val currentUserId: Flow<Int?>
+    suspend fun clearUserSession()
 }
 
-class OfflineUserRepository(private val userDao: UserDao) : UserRepository {
+class OfflineUserRepository(
+    private val userDao: UserDao,
+    private val sessionManager: SessionManager
+) : UserRepository {
     override suspend fun insertUser(user: User): Long {
         return userDao.insertUser(user)
     }
@@ -32,6 +41,19 @@ class OfflineUserRepository(private val userDao: UserDao) : UserRepository {
 
     override suspend fun logoutAll() {
         // Digunakan untuk memastikan hanya satu user yang login
+        userDao.logoutAll()
+    }
+
+    override suspend fun saveSession(userId: Int) {
+        sessionManager.saveUserId(userId)
+    }
+
+    override val currentUserId: Flow<Int?> = sessionManager.userIdFlow
+
+    override suspend fun clearUserSession() {
+        // Clear session di DataStore
+        sessionManager.clearSession()
+        // Opsi: Update status isLoggedIn di Room ke false (jika diperlukan)
         userDao.logoutAll()
     }
 }

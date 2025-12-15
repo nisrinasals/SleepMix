@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.example.sleepmix.room.Mix
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 
 data class MyMixUiState(
     val userMixes: List<MixWithSounds> = emptyList(),
@@ -25,12 +27,17 @@ class MyMixViewModel(
     private val userRepository: UserRepository // Diperlukan untuk mendapatkan currentUserId
 ) : ViewModel() {
 
-    // PENTING: Ganti DUMMY_USER_ID ini dengan fungsi yang mengambil ID user yang sedang login
-    private val DUMMY_USER_ID = 1
-
-    val uiState: StateFlow<MyMixUiState> = mixRepository
-        // Mengambil Mix secara reaktif (Flow)
-        .getMixesByUserIdStream(DUMMY_USER_ID)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val uiState: StateFlow<MyMixUiState> = userRepository.currentUserId // Ambil ID dari SessionManager
+        .flatMapLatest { userId ->
+            if (userId != null) {
+                // Ambil Mix dari Repository jika user ID ada
+                mixRepository.getMixesByUserIdStream(userId)
+            } else {
+                // Jika tidak ada user ID, kembalikan Flow kosong (atau handle error)
+                flowOf(emptyList())
+            }
+        }
         .map { mixList ->
             MyMixUiState(
                 userMixes = mixList,

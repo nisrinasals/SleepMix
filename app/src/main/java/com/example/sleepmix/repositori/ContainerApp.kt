@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import com.example.sleepmix.room.SleepMixDatabase
 import com.example.sleepmix.room.dao.*
+import com.example.sleepmix.util.SessionManager
 
 
 interface AppContainer {
@@ -30,12 +31,14 @@ class ContainerDataApp(private val context: Context) : AppContainer {
     private val soundDao: SoundDao by lazy { database.soundDao() }
     private val mixDao: MixDao by lazy { database.mixDao() }
     private val mixSoundDao: MixSoundDao by lazy { database.mixSoundDao() }
+    private val sessionManager: SessionManager by lazy {
+        SessionManager(context)
+    }
 
-    // 3. INISIALISASI REPOSITORY (Implementasi Interface AppContainer)
+    // 3. INISIALISASI REPOSITORY (Gunakan SessionManager di UserRepository)
 
-    // Menyediakan OfflineUserRepository
     override val userRepository: UserRepository by lazy {
-        OfflineUserRepository(userDao)
+        OfflineUserRepository(userDao, sessionManager) // PASS sessionManager
     }
 
     // Menyediakan OfflineSoundRepository
