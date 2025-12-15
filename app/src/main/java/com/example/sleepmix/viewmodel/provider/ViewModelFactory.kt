@@ -3,7 +3,9 @@ package com.example.sleepmix.viewmodel.provider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.sleepmix.repositori.MixRepository
+import com.example.sleepmix.repositori.SoundRepository
 import com.example.sleepmix.repositori.UserRepository
+import com.example.sleepmix.viewmodel.CreateMixViewModel
 import com.example.sleepmix.viewmodel.LoginViewModel
 import com.example.sleepmix.viewmodel.MixDetailViewModel
 import com.example.sleepmix.viewmodel.RegistrasiViewModel
@@ -38,6 +40,22 @@ class MixDetailViewModelFactory(
             @Suppress("UNCHECKED_CAST")
             return MixDetailViewModel(
                 mixRepository = mixRepository
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class CreateMixViewModelFactory(
+    private val mixRepository: MixRepository,
+    private val soundRepository: SoundRepository
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(CreateMixViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return CreateMixViewModel(
+                mixRepository = mixRepository,
+                soundRepository = soundRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
