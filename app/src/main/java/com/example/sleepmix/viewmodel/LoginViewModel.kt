@@ -1,22 +1,22 @@
 package com.example.sleepmix.viewmodel
 
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sleepmix.repositori.UserRepository
+import com.example.sleepmix.util.PasswordHasher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-
 data class LoginUiState(
     val email: String = "",
     val passwordInput: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val loginSuccess: Boolean = false
+    val loginSuccess: Boolean = false,
+    val loggedInUserId: Int? = null
 )
 
 class LoginViewModel(private val userRepository: UserRepository) : ViewModel() {
@@ -44,7 +44,7 @@ class LoginViewModel(private val userRepository: UserRepository) : ViewModel() {
             val user = userRepository.getUserByEmail(email)
 
             if (user == null) {
-                // User Found & Password Match? No (email tidak ditemukan)
+                // User tidak ditemukan
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -54,22 +54,26 @@ class LoginViewModel(private val userRepository: UserRepository) : ViewModel() {
                 return@launch
             }
 
-            // 2. Hash Password (Asumsi: Anda memiliki fungsi utilitas hashing)
-            // *PENTING: Fungsi hash harus ditambahkan di project Anda*
-            val hashedPassword = hashPassword(password)
+            // 2. Verifikasi Password menggunakan PasswordHasher
+            val isPasswordCorrect = PasswordHasher.verifyPassword(password, user.passwordHash)
 
-            // 3. Verifikasi Password (user.passwordHash adalah password hash yang disimpan di DB)
-            if (user.passwordHash == hashedPassword) {
-                // User Found & Password Match? Yes
+            if (isPasswordCorrect) {
+                // Password benar - Login berhasil
 
-                // 4. Pastikan semua user lain logout, lalu update status login user ini.
-                userRepository.logoutAll() // Query: UPDATE tblUser SET isLoggedIn = 0
+                // 3. Pastikan semua user lain logout, lalu update status login user ini
+                userRepository.logoutAll()
                 userRepository.updateUser(user.copy(isLoggedIn = true))
 
-                // 5. Success
-                _uiState.update { it.copy(isLoading = false, loginSuccess = true) }
+                // 4. Success
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        loginSuccess = true,
+                        loggedInUserId = user.userId
+                    )
+                }
             } else {
-                // User Found & Password Match? No (password salah)
+                // Password salah
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -79,11 +83,8 @@ class LoginViewModel(private val userRepository: UserRepository) : ViewModel() {
             }
         }
     }
-}
 
-// *** Placeholder untuk fungsi hashing. Anda harus mengganti ini dengan implementasi hash yang aman (misalnya BCrypt).
-private fun hashPassword(password: String): String {
-    // Implementasi hash yang aman harus ada di sini.
-    // Sementara, kita asumsikan input = hash (HANYA UNTUK TESTING LOKAL)
-    return password
+    fun clearError() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
 }

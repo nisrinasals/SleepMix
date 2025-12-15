@@ -3,7 +3,8 @@ package com.example.sleepmix.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sleepmix.repositori.UserRepository
-import com.example.sleepmix.room.User // Pastikan ini diimpor
+import com.example.sleepmix.room.User
+import com.example.sleepmix.util.PasswordHasher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,15 +47,20 @@ class RegistrasiViewModel(private val userRepository: UserRepository) : ViewMode
 
             // 1. Validasi Input
             if (state.nama.isBlank() || state.email.isBlank() || state.passwordInput.length < 6) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Data input tidak valid. Pastikan password minimal 6 karakter.") }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "Data input tidak valid. Pastikan password minimal 6 karakter."
+                    )
+                }
                 return@launch
             }
 
-            // 2. Cek Email Sudah Ada? (Email Already Exist?)
+            // 2. Cek Email Sudah Ada?
             val existingUser = userRepository.getUserByEmail(state.email)
 
             if (existingUser != null) {
-                // Yes (Email Already Exist) -> Show Error Message
+                // Email sudah terdaftar
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -64,16 +70,15 @@ class RegistrasiViewModel(private val userRepository: UserRepository) : ViewMode
                 return@launch
             }
 
-            // 3. Hash Password
-            // *PENTING: Gunakan fungsi hash yang aman di sini (misalnya BCrypt)*
-            val hashedPassword = hashPassword(state.passwordInput)
+            // 3. Hash Password menggunakan PasswordHasher
+            val hashedPassword = PasswordHasher.hashPassword(state.passwordInput)
 
             // 4. INSERT INTO USER Table
             val newUser = User(
                 nama = state.nama,
                 email = state.email,
-                passwordHash = hashedPassword, // Menggunakan hash
-                isLoggedIn = false // Awalnya tidak login
+                passwordHash = hashedPassword,
+                isLoggedIn = false
             )
 
             try {
@@ -82,15 +87,17 @@ class RegistrasiViewModel(private val userRepository: UserRepository) : ViewMode
                 // 5. Success
                 _uiState.update { it.copy(isLoading = false, registrasiSuccess = true) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Gagal mendaftar: ${e.message}") }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "Gagal mendaftar: ${e.message}"
+                    )
+                }
             }
         }
     }
-}
 
-// *** Placeholder untuk fungsi hashing. Anda harus mengganti ini dengan implementasi hash yang aman (seperti BCrypt).
-private fun hashPassword(password: String): String {
-    // Implementasi hash yang aman harus ada di sini.
-    // Sementara, kita asumsikan input = hash (HANYA UNTUK TESTING LOKAL)
-    return password
+    fun clearError() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
 }
