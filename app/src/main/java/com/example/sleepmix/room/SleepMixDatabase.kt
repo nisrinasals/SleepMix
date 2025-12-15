@@ -1,6 +1,7 @@
 package com.example.sleepmix.room
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -38,7 +39,7 @@ abstract class SleepMixDatabase : RoomDatabase() {
                     SleepMixDatabase::class.java,
                     "sleepmix_database"
                 )
-                    .fallbackToDestructiveMigration()  // IMPORTANT: Re-create database on version change
+                    .fallbackToDestructiveMigration()
                     .addCallback(SleepMixDatabaseCallback(context))
                     .build()
                 INSTANCE = instance
@@ -51,12 +52,26 @@ abstract class SleepMixDatabase : RoomDatabase() {
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
 
-            CoroutineScope(Dispatchers.IO).launch {
-                val database = INSTANCE ?: return@launch
-                val soundDao = database.soundDao()
+            Log.d("Database", "onCreate called - Starting seeding")
 
-                val initialSounds = SoundSeeds.populateInitialSounds(context)
-                soundDao.insertAll(initialSounds)
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val database = INSTANCE ?: return@launch
+                    val soundDao = database.soundDao()
+
+                    val initialSounds = SoundSeeds.populateInitialSounds(context)
+
+                    Log.d("Database", "Inserting ${initialSounds.size} sounds")
+                    initialSounds.forEach { sound ->
+                        Log.d("Database", "Sound: ${sound.name}, Path: ${sound.filePath}, Icon: ${sound.iconRes}")
+                    }
+
+                    soundDao.insertAll(initialSounds)
+                    Log.d("Database", "✅ Seeding completed successfully")
+
+                } catch (e: Exception) {
+                    Log.e("Database", "❌ Seeding failed", e)
+                }
             }
         }
     }

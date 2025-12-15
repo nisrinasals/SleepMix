@@ -12,7 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,6 +33,7 @@ fun BrowseSoundScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    val context = LocalContext.current  // Get context for MediaPlayer
 
     // Clean up when leaving screen
     DisposableEffect(Unit) {
@@ -92,12 +93,26 @@ fun BrowseSoundScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Text(
-                        text = uiState.errorMessage!!,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(12.dp)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = uiState.errorMessage!!,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { viewModel.clearError() }) {
+                            Icon(
+                                Icons.Default.Close,
+                                "Dismiss",
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
                 }
             }
 
@@ -157,7 +172,7 @@ fun BrowseSoundScreen(
                                         if (uiState.currentlyPlayingId == sound.soundId) {
                                             viewModel.stopPreview()
                                         } else {
-                                            viewModel.playPreview(sound)
+                                            viewModel.playPreview(sound, context)  // Pass context
                                         }
                                     }
                                 )
