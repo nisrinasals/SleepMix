@@ -59,6 +59,7 @@ dependencies {
     //Room
     implementation(libs.bundles.room)
     implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
     ksp(libs.room.compiler)
     //ViewModel
     implementation(libs.lifecycle.viewmodel.compose)
