@@ -3,7 +3,6 @@ package com.example.sleepmix.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -19,6 +18,7 @@ import com.example.sleepmix.repositori.AplikasiSleepMix
 import com.example.sleepmix.room.MixSound
 import com.example.sleepmix.viewmodel.MixDetailViewModel
 import com.example.sleepmix.viewmodel.provider.MixDetailViewModelFactory
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -35,8 +35,17 @@ fun MixDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
-    // Bind service on composition
+    // CRITICAL FIX: Load sound details
+    val soundRepository = AplikasiSleepMix.container.soundRepository
+    var soundMap by remember { mutableStateOf<Map<Int, com.example.sleepmix.room.Sound>>(emptyMap()) }
+
+    LaunchedEffect(Unit) {
+        val allSounds = soundRepository.getAllSounds()
+        soundMap = allSounds.associateBy { it.soundId }
+    }
+
     DisposableEffect(Unit) {
         viewModel.loadMix(mixId)
         viewModel.bindService(context)
@@ -45,20 +54,21 @@ fun MixDetailScreen(
         }
     }
 
-    // Delete confirmation dialog
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete Mix?") },
-            text = {
-                Text("Are you sure you want to delete this mix? This action cannot be undone.")
-            },
+            text = { Text("Are you sure?") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showDeleteDialog = false
-                        // TODO: Implement delete functionality
-                        onNavigateBack()
+                        scope.launch {
+                            uiState.mixWithSounds?.mix?.let { mix ->
+                                AplikasiSleepMix.container.mixRepository.deleteMix(mix)
+                            }
+                            onNavigateBack()
+                        }
                     }
                 ) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
@@ -104,9 +114,7 @@ fun MixDetailScreen(
         when {
             uiState.isLoading -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
@@ -115,9 +123,7 @@ fun MixDetailScreen(
 
             uiState.mixWithSounds == null -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     Text("Mix not found")
@@ -127,15 +133,10 @@ fun MixDetailScreen(
             else -> {
                 val mixWithSounds = uiState.mixWithSounds!!
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
+                    modifier = Modifier.fillMaxSize().padding(paddingValues)
                 ) {
-                    // Mix Info Card
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer
                         )
@@ -144,34 +145,24 @@ fun MixDetailScreen(
                             modifier = Modifier.padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Large play/pause button
                             FloatingActionButton(
                                 onClick = { viewModel.togglePlayPause() },
                                 modifier = Modifier.size(80.dp),
                                 containerColor = MaterialTheme.colorScheme.primary
                             ) {
                                 Icon(
-                                    imageVector = if (uiState.isPlaying)
-                                        Icons.Default.Pause
-                                    else
-                                        Icons.Default.PlayArrow,
+                                    imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = if (uiState.isPlaying) "Pause" else "Play",
                                     modifier = Modifier.size(40.dp)
                                 )
                             }
 
                             Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = mixWithSounds.mix.mixName,
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-
+                            Text(text = mixWithSounds.mix.mixName, style = MaterialTheme.typography.headlineSmall)
                             Spacer(modifier = Modifier.height(8.dp))
 
                             val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
                             val dateString = dateFormat.format(Date(mixWithSounds.mix.creationDate))
-
                             Text(
                                 text = "${mixWithSounds.sounds.size} sounds • Created $dateString",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -180,7 +171,6 @@ fun MixDetailScreen(
                         }
                     }
 
-                    // Sounds List
                     Text(
                         text = "Sounds",
                         style = MaterialTheme.typography.titleMedium,
@@ -193,11 +183,11 @@ fun MixDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(mixWithSounds.sounds) { mixSound ->
-                            // Get sound details from repository
-                            val soundName = mixSound.soundId.toString() // Placeholder
+                            val sound = soundMap[mixSound.soundId]
                             MixSoundCard(
                                 mixSound = mixSound,
-                                soundName = soundName,
+                                soundName = sound?.name ?: "Unknown",
+                                soundIcon = sound?.iconRes ?: android.R.drawable.ic_media_play,
                                 onVolumeChange = { newVolume ->
                                     viewModel.updateMixSoundVolume(mixSound, newVolume)
                                 }
@@ -214,13 +204,12 @@ fun MixDetailScreen(
 fun MixSoundCard(
     mixSound: MixSound,
     soundName: String,
+    soundIcon: Int,
     onVolumeChange: (Float) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -228,16 +217,14 @@ fun MixSoundCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    Icons.Default.MusicNote,
+                    painter = painterResource(id = soundIcon),
                     contentDescription = null,
                     modifier = Modifier.size(40.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
-
                 Spacer(modifier = Modifier.width(16.dp))
-
                 Text(
-                    text = "Sound $soundName",
+                    text = soundName,
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
@@ -250,25 +237,18 @@ fun MixSoundCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = if (mixSound.volumeLevel == 0f)
-                        Icons.Default.VolumeOff
-                    else
-                        Icons.Default.VolumeUp,
+                    imageVector = if (mixSound.volumeLevel == 0f) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
                     contentDescription = "Volume",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
                 Spacer(modifier = Modifier.width(8.dp))
-
                 Slider(
                     value = mixSound.volumeLevel,
                     onValueChange = onVolumeChange,
                     modifier = Modifier.weight(1f),
                     valueRange = 0f..1f
                 )
-
                 Spacer(modifier = Modifier.width(8.dp))
-
                 Text(
                     text = "${(mixSound.volumeLevel * 100).toInt()}%",
                     style = MaterialTheme.typography.bodyMedium,

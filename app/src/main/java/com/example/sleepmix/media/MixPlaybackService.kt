@@ -5,26 +5,25 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.example.sleepmix.MainActivity
 import com.example.sleepmix.repositori.AplikasiSleepMix
 import com.example.sleepmix.repositori.MixRepository
+import com.example.sleepmix.repositori.SoundRepository
 import com.example.sleepmix.room.MixSound
 import kotlinx.coroutines.*
 
-// Ganti "Service" menjadi "MediaSessionService"
 class MixPlaybackService : MediaSessionService() {
 
     private lateinit var audioController: AudioController
     private lateinit var mixRepository: MixRepository
-    private val serviceScope = CoroutineScope(Dispatchers.Main)
+    private lateinit var soundRepository: SoundRepository
+    private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
 
-    // MediaSession yang akan berinteraksi dengan sistem Android
     private var mediaSession: MediaSession? = null
-
-    // Player dummy atau player utama, diperlukan oleh MediaSession
     private lateinit var dummyPlayer: ExoPlayer
 
     override fun onCreate() {
@@ -32,25 +31,18 @@ class MixPlaybackService : MediaSessionService() {
 
         audioController = AudioController(applicationContext)
         mixRepository = AplikasiSleepMix.container.mixRepository
+        soundRepository = AplikasiSleepMix.container.soundRepository
 
-        // Player dummy untuk MediaSession (AudioController yang sebenarnya memutar)
         dummyPlayer = createDummyPlayer(applicationContext)
 
-        // 1. Bangun MediaSession
         mediaSession = MediaSession.Builder(this, dummyPlayer)
             .setId("SleepMixSession")
-            // Mengatur Intent yang akan dibuka saat notifikasi diklik
             .setSessionActivity(getSessionActivityPendingIntent())
             .build()
-
-        // Catatan: Foreground Service akan otomatis dikelola oleh MediaSessionService
-        // berdasarkan status pemutaran dummyPlayer.
     }
 
-    // Fungsi untuk membuat PendingIntent yang membuka MainActivity
     private fun getSessionActivityPendingIntent(): PendingIntent {
         val intent = Intent(this, MainActivity::class.java).apply {
-            // Flags untuk menghindari pembuatan instance Activity baru
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         return PendingIntent.getActivity(
@@ -65,7 +57,6 @@ class MixPlaybackService : MediaSessionService() {
         )
     }
 
-    // Player Dummy: Diperlukan oleh MediaSession, tetapi tidak benar-benar memutar audio.
     private fun createDummyPlayer(context: Context): ExoPlayer {
         return ExoPlayer.Builder(context).build().apply {
             setVolume(0f)
@@ -73,19 +64,15 @@ class MixPlaybackService : MediaSessionService() {
         }
     }
 
-    // 2. Wajib Override: Memberikan MediaSession kepada sistem
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
 
-    // 3. Service Connection masih diperlukan untuk interaksi langsung ViewModel -> AudioController
     private val binder = LocalBinder()
     inner class LocalBinder : android.os.Binder() {
         fun getService(): MixPlaybackService = this@MixPlaybackService
     }
 
     override fun onBind(intent: Intent?): IBinder? {
-        // Panggil parent untuk memungkinkan MediaSessionService bekerja
         super.onBind(intent)
-        // Kembalikan binder lokal untuk interaksi langsung dari ViewModel
         return binder
     }
 
@@ -100,31 +87,67 @@ class MixPlaybackService : MediaSessionService() {
         super.onDestroy()
     }
 
-    // Fungsi yang dipanggil dari ViewModel (melalui Binder)
-
+    /**
+     * CRITICAL FIX: Start Mix with proper sound loading
+     */
     fun startMix(mixId: Int) {
-        serviceScope.launch {
-            // Logika untuk memuat MixWithSounds dan memulai audioController tetap di sini
-            // ...
+        Log.d("MixPlaybackService", "startMix called for mixId: $mixId")
 
-            // PENTING: Untuk menampilkan notifikasi, kita harus "memutar" dummyPlayer
-            dummyPlayer.playWhenReady = true
-            dummyPlayer.prepare()
+        serviceScope.launch {
+            try {
+                // 1. Load Mix with Sounds
+                var mixWithSounds: com.example.sleepmix.room.MixWithSounds? = null
+                mixRepository.getMixWithSoundsById(mixId).collect { data ->
+                    mixWithSounds = data
+                }
+
+                if (mixWithSounds == null) {
+                    Log.e("MixPlaybackService", "Mix not found: $mixId")
+                    return@launch
+                }
+
+                Log.d("MixPlaybackService", "Loaded mix: ${mixWithSounds!!.mix.mixName}")
+                Log.d("MixPlaybackService", "Number of sounds: ${mixWithSounds!!.sounds.size}")
+
+                // 2. Load all Sound details
+                val allSounds = soundRepository.getAllSounds()
+                val soundMap = allSounds.associateBy { it.soundId }
+
+                // 3. Start each sound in the mix
+                mixWithSounds!!.sounds.forEach { mixSound ->
+                    val sound = soundMap[mixSound.soundId]
+                    if (sound != null) {
+                        Log.d("MixPlaybackService", "Starting sound: ${sound.name}, volume: ${mixSound.volumeLevel}")
+
+                        // Use sound's file path from database
+                        audioController.startSound(mixSound, sound.filePath)
+                    } else {
+                        Log.e("MixPlaybackService", "Sound not found for soundId: ${mixSound.soundId}")
+                    }
+                }
+
+                // 4. Activate dummy player for notification
+                dummyPlayer.playWhenReady = true
+                dummyPlayer.prepare()
+
+                Log.d("MixPlaybackService", "✅ Mix playback started successfully")
+
+            } catch (e: Exception) {
+                Log.e("MixPlaybackService", "Error starting mix", e)
+            }
         }
     }
 
     fun stopAll() {
+        Log.d("MixPlaybackService", "stopAll called")
         audioController.stopAllPlayers()
-        // Menghentikan dummyPlayer akan menghapus notifikasi
         dummyPlayer.playWhenReady = false
         dummyPlayer.stop()
         stopSelf()
     }
 
     fun setSoundVolume(mixSound: MixSound, newVolumeFloat: Float) {
+        Log.d("MixPlaybackService", "setSoundVolume: ${mixSound.mixSoundId}, volume: $newVolumeFloat")
         audioController.setVolume(mixSound.mixSoundId, newVolumeFloat)
-
-        // Update volume ke database (sudah ada di ViewModel, tapi bisa juga di sini)
-        // ...
     }
 }

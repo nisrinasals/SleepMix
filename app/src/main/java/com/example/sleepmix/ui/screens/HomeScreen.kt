@@ -5,7 +5,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -20,12 +20,39 @@ fun HomeScreen(
     onNavigateToCreateMix: () -> Unit,
     onLogout: () -> Unit
 ) {
+    // NEW: Logout confirmation dialog state
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    // NEW: Logout confirmation dialog per SRS Section 3.5.2 Sequence 4
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Logout") },
+            text = { Text("Are u sure?") },  // Per SRS Section 2.6
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLogoutDialog = false
+                        onLogout()
+                    }
+                ) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("No")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("SleepMix") },
                 actions = {
-                    IconButton(onClick = onLogout) {
+                    IconButton(onClick = { showLogoutDialog = true }) {  // NEW: Show dialog instead of direct logout
                         Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
                     }
                 },

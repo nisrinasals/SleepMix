@@ -9,9 +9,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.sleepmix.ui.screens.*
 
-/**
- * Sealed class untuk mendefinisikan semua route navigasi
- */
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
@@ -22,6 +19,11 @@ sealed class Screen(val route: String) {
 
     object BrowseSound : Screen("browse/{userId}") {
         fun createRoute(userId: Int) = "browse/$userId"
+    }
+
+    // PAGE5: Sound Detail Screen
+    object SoundDetail : Screen("sound_detail/{soundId}") {
+        fun createRoute(soundId: Int) = "sound_detail/$soundId"
     }
 
     object MyMixList : Screen("my_mix/{userId}") {
@@ -39,11 +41,13 @@ sealed class Screen(val route: String) {
     object EditMix : Screen("edit_mix/{mixId}/{userId}") {
         fun createRoute(mixId: Int, userId: Int) = "edit_mix/$mixId/$userId"
     }
+
+    // PAGE9: Edit Volume Screen
+    object EditVolume : Screen("edit_volume/{mixId}/{soundId}") {
+        fun createRoute(mixId: Int, soundId: Int) = "edit_volume/$mixId/$soundId"
+    }
 }
 
-/**
- * Main Navigation Composable
- */
 @Composable
 fun SleepMixNavigation(
     navController: NavHostController = rememberNavController()
@@ -52,9 +56,7 @@ fun SleepMixNavigation(
         navController = navController,
         startDestination = Screen.Login.route
     ) {
-        // ============================================
-        // LOGIN SCREEN
-        // ============================================
+        // PAGE1: LOGIN SCREEN
         composable(Screen.Login.route) {
             LoginScreen(
                 onNavigateToRegister = {
@@ -62,16 +64,13 @@ fun SleepMixNavigation(
                 },
                 onLoginSuccess = { userId ->
                     navController.navigate(Screen.Home.createRoute(userId)) {
-                        // Clear back stack sampai login
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 }
             )
         }
 
-        // ============================================
         // REGISTER SCREEN
-        // ============================================
         composable(Screen.Register.route) {
             RegisterScreen(
                 onNavigateBack = {
@@ -83,9 +82,7 @@ fun SleepMixNavigation(
             )
         }
 
-        // ============================================
-        // HOME SCREEN
-        // ============================================
+        // PAGE2: HOME SCREEN
         composable(
             route = Screen.Home.route,
             arguments = listOf(navArgument("userId") { type = NavType.IntType })
@@ -111,9 +108,7 @@ fun SleepMixNavigation(
             )
         }
 
-        // ============================================
         // BROWSE SOUND SCREEN
-        // ============================================
         composable(
             route = Screen.BrowseSound.route,
             arguments = listOf(navArgument("userId") { type = NavType.IntType })
@@ -124,13 +119,29 @@ fun SleepMixNavigation(
                 userId = userId,
                 onNavigateBack = {
                     navController.popBackStack()
+                },
+                onNavigateToSoundDetail = { soundId ->
+                    navController.navigate(Screen.SoundDetail.createRoute(soundId))
                 }
             )
         }
 
-        // ============================================
-        // MY MIX LIST SCREEN
-        // ============================================
+        // PAGE5: SOUND DETAIL SCREEN
+        composable(
+            route = Screen.SoundDetail.route,
+            arguments = listOf(navArgument("soundId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val soundId = backStackEntry.arguments?.getInt("soundId") ?: 0
+
+            SoundDetailScreen(
+                soundId = soundId,
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // PAGE3: MY MIX LIST SCREEN
         composable(
             route = Screen.MyMixList.route,
             arguments = listOf(navArgument("userId") { type = NavType.IntType })
@@ -151,9 +162,7 @@ fun SleepMixNavigation(
             )
         }
 
-        // ============================================
-        // CREATE MIX SCREEN
-        // ============================================
+        // PAGE6: CREATE MIX SCREEN
         composable(
             route = Screen.CreateMix.route,
             arguments = listOf(navArgument("userId") { type = NavType.IntType })
@@ -166,7 +175,6 @@ fun SleepMixNavigation(
                     navController.popBackStack()
                 },
                 onMixCreated = {
-                    // Navigate back to My Mix List after creation
                     navController.navigate(Screen.MyMixList.createRoute(userId)) {
                         popUpTo(Screen.Home.createRoute(userId)) {
                             inclusive = false
@@ -176,9 +184,7 @@ fun SleepMixNavigation(
             )
         }
 
-        // ============================================
-        // MIX DETAIL SCREEN
-        // ============================================
+        // PAGE7: MIX DETAIL SCREEN
         composable(
             route = Screen.MixDetail.route,
             arguments = listOf(
@@ -200,9 +206,7 @@ fun SleepMixNavigation(
             )
         }
 
-        // ============================================
-        // EDIT MIX SCREEN
-        // ============================================
+        // PAGE8: EDIT MIX SCREEN
         composable(
             route = Screen.EditMix.route,
             arguments = listOf(
@@ -219,7 +223,33 @@ fun SleepMixNavigation(
                     navController.popBackStack()
                 },
                 onSaveSuccess = {
-                    // Navigate back to Mix Detail after saving
+                    navController.popBackStack()
+                },
+                onNavigateToEditVolume = { soundId ->
+                    navController.navigate(Screen.EditVolume.createRoute(mixId, soundId))
+                }
+            )
+        }
+
+        // PAGE9: EDIT VOLUME SCREEN
+        composable(
+            route = Screen.EditVolume.route,
+            arguments = listOf(
+                navArgument("mixId") { type = NavType.IntType },
+                navArgument("soundId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val mixId = backStackEntry.arguments?.getInt("mixId") ?: 0
+            val soundId = backStackEntry.arguments?.getInt("soundId") ?: 0
+
+            EditVolumeScreen(
+                mixId = mixId,
+                soundId = soundId,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onSoundRemoved = {
+                    // Go back to EditMix after removing sound
                     navController.popBackStack()
                 }
             )

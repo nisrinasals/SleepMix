@@ -98,3 +98,33 @@ class EditMixViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+// NEW: EditVolumeViewModelFactory for PAGE9
+class EditVolumeViewModelFactory(
+    private val mixRepository: MixRepository,
+    private val soundRepository: SoundRepository
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(EditVolumeViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return EditVolumeViewModel(
+                mixRepository = mixRepository,
+                soundRepository = soundRepository
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+// NEW: SoundDetailViewModelFactory for PAGE5
+class SoundDetailViewModelFactory(
+    private val soundRepository: SoundRepository
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(SoundDetailViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return SoundDetailViewModel(soundRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}

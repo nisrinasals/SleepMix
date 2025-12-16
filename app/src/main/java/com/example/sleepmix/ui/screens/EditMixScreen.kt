@@ -1,16 +1,15 @@
 package com.example.sleepmix.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -27,6 +26,7 @@ fun EditMixScreen(
     mixId: Int,
     onNavigateBack: () -> Unit,
     onSaveSuccess: () -> Unit,
+    onNavigateToEditVolume: (Int) -> Unit,  // NEW: Navigate to PAGE9
     viewModel: EditMixViewModel = viewModel(
         factory = EditMixViewModelFactory(
             mixRepository = AplikasiSleepMix.container.mixRepository,
@@ -35,14 +35,11 @@ fun EditMixScreen(
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
 
-    // Load mix on composition
     LaunchedEffect(mixId) {
         viewModel.loadMix(mixId)
     }
 
-    // Handle save success
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
             onSaveSuccess()
@@ -138,19 +135,11 @@ fun EditMixScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(uiState.selectedMixSounds) { selectedSound ->
-                                SelectedSoundItem(
+                                SelectedSoundItemClickable(
                                     selectedSound = selectedSound,
-                                    onVolumeChange = { newVolume ->
-                                        viewModel.updateSelectedSoundVolume(
-                                            selectedSound.soundId,
-                                            newVolume
-                                        )
-                                    },
-                                    onRemove = {
-                                        val originalSound = uiState.availableSounds.find {
-                                            it.soundId == selectedSound.soundId
-                                        }
-                                        originalSound?.let { viewModel.toggleSoundSelection(it) }
+                                    onClick = {
+                                        // NEW: Navigate to PAGE9 (EditVolume)
+                                        onNavigateToEditVolume(selectedSound.soundId)
                                     }
                                 )
                             }
@@ -188,6 +177,115 @@ fun EditMixScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SelectedSoundItemClickable(
+    selectedSound: SelectedMixSound,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),  // NEW: Clickable to navigate to PAGE9
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = selectedSound.iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = selectedSound.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${(selectedSound.volumeLevel * 100).toInt()}% volume",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                )
+            }
+
+            Icon(
+                Icons.Default.KeyboardArrowRight,
+                contentDescription = "Edit",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AvailableSoundItem(
+    sound: Sound,
+    isSelected: Boolean,
+    onToggleSelection: () -> Unit
+) {
+    Card(
+        onClick = onToggleSelection,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.secondaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = sound.iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Text(
+                text = sound.name,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            if (isSelected) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Add",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

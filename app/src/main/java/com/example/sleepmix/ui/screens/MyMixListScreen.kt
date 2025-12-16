@@ -1,6 +1,5 @@
 package com.example.sleepmix.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,14 +37,12 @@ fun MyMixListScreen(
     val uiState by viewModel.uiState.collectAsState()
     var mixToDelete by remember { mutableStateOf<MixWithSounds?>(null) }
 
-    // Delete confirmation dialog
+    // Delete confirmation dialog - Updated per SRS
     if (mixToDelete != null) {
         AlertDialog(
             onDismissRequest = { mixToDelete = null },
             title = { Text("Delete Mix?") },
-            text = {
-                Text("Are you sure you want to delete \"${mixToDelete?.mix?.mixName}\"? This action cannot be undone.")
-            },
+            text = { Text("Are u sure?") },  // Per SRS Section 2.6
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -53,12 +50,12 @@ fun MyMixListScreen(
                         mixToDelete = null
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text("Yes", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { mixToDelete = null }) {
-                    Text("Cancel")
+                    Text("No")
                 }
             }
         )
@@ -99,6 +96,7 @@ fun MyMixListScreen(
             }
 
             uiState.isEmpty -> {
+                // PAGE4: Empty State - Updated per SRS Section 2.6
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -116,23 +114,13 @@ fun MyMixListScreen(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
                         Spacer(modifier = Modifier.height(24.dp))
+
+                        // Per SRS Section 2.6: "Belum Ada mix, tekan + untuk menambah mix"
                         Text(
-                            text = "No Mixes Yet",
-                            style = MaterialTheme.typography.headlineSmall,
+                            text = "Belum Ada mix, tekan + untuk menambah mix",
+                            style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Create your first sound mix to get started",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(onClick = onNavigateToCreateMix) {
-                            Icon(Icons.Default.Add, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Create Your First Mix")
-                        }
                     }
                 }
             }

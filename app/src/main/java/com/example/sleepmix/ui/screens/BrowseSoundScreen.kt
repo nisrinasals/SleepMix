@@ -12,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -27,20 +26,13 @@ import com.example.sleepmix.viewmodel.provider.BrowseSoundViewModelFactory
 fun BrowseSoundScreen(
     userId: Int,
     onNavigateBack: () -> Unit,
+    onNavigateToSoundDetail: (Int) -> Unit,  // NEW: Navigate to PAGE5
     viewModel: BrowseSoundViewModel = viewModel(
         factory = BrowseSoundViewModelFactory(AplikasiSleepMix.container.soundRepository)
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
-    val context = LocalContext.current  // Get context for MediaPlayer
-
-    // Clean up when leaving screen
-    DisposableEffect(Unit) {
-        onDispose {
-            viewModel.stopPreview()
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -83,39 +75,6 @@ fun BrowseSoundScreen(
                 singleLine = true
             )
 
-            // Error Message
-            if (uiState.errorMessage != null) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = uiState.errorMessage!!,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = { viewModel.clearError() }) {
-                            Icon(
-                                Icons.Default.Close,
-                                "Dismiss",
-                                tint = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        }
-                    }
-                }
-            }
-
             when {
                 uiState.isLoading -> {
                     Box(
@@ -136,6 +95,7 @@ fun BrowseSoundScreen(
                     }
 
                     if (filteredSounds.isEmpty()) {
+                        // Per SRS: Show "No sounds found"
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -149,7 +109,7 @@ fun BrowseSoundScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "No sounds found",
+                                    text = "No sounds found",  // Per SRS Section 2.6
                                     style = MaterialTheme.typography.titleMedium
                                 )
                             }
@@ -167,13 +127,9 @@ fun BrowseSoundScreen(
                             ) { sound ->
                                 SoundCard(
                                     sound = sound,
-                                    isPlaying = uiState.currentlyPlayingId == sound.soundId,
-                                    onPlayPause = {
-                                        if (uiState.currentlyPlayingId == sound.soundId) {
-                                            viewModel.stopPreview()
-                                        } else {
-                                            viewModel.playPreview(sound, context)  // Pass context
-                                        }
+                                    onClick = {
+                                        // NEW: Navigate to PAGE5 (SoundDetail)
+                                        onNavigateToSoundDetail(sound.soundId)
                                     }
                                 )
                             }
@@ -188,8 +144,7 @@ fun BrowseSoundScreen(
 @Composable
 fun SoundCard(
     sound: Sound,
-    isPlaying: Boolean,
-    onPlayPause: () -> Unit
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -197,16 +152,13 @@ fun SoundCard(
             .aspectRatio(1f),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isPlaying)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clickable(onClick = onPlayPause)
+                .clickable(onClick = onClick)  // Click navigates to detail
                 .padding(16.dp)
         ) {
             Column(
@@ -219,10 +171,7 @@ fun SoundCard(
                     painter = painterResource(id = sound.iconRes),
                     contentDescription = sound.name,
                     modifier = Modifier.size(64.dp),
-                    tint = if (isPlaying)
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -233,29 +182,18 @@ fun SoundCard(
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = if (isPlaying)
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Play/Pause Button
-                IconButton(
-                    onClick = onPlayPause,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        modifier = Modifier.size(32.dp),
-                        tint = if (isPlaying)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                // Play icon indicator
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Play",
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
