@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sleepmix.repositori.AplikasiSleepMix
 import com.example.sleepmix.room.Sound
+import com.example.sleepmix.ui.components.AvailableSoundItem
 import com.example.sleepmix.viewmodel.CreateMixViewModel
 import com.example.sleepmix.viewmodel.SelectedMixSound
 import com.example.sleepmix.viewmodel.provider.CreateMixViewModelFactory
@@ -242,63 +243,6 @@ fun SelectedSoundItem(
                     text = "${(selectedSound.volumeLevel * 100).toInt()}%",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.width(48.dp)
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AvailableSoundItem(
-    sound: Sound,
-    isSelected: Boolean,
-    onToggleSelection: () -> Unit
-) {
-    Card(
-        onClick = onToggleSelection,
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected)
-                MaterialTheme.colorScheme.secondaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                painter = painterResource(id = sound.iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Text(
-                text = sound.name,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            if (isSelected) {
-                Icon(
-                    Icons.Default.Check,
-                    contentDescription = "Selected",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            } else {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Add",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

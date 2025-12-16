@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
         Mix::class,
         MixSound::class
     ],
-    version = 2,  // INCREASED VERSION untuk force re-create
+    version = 3,  // INCREASED VERSION untuk force re-create
     exportSchema = false
 )
 abstract class SleepMixDatabase : RoomDatabase() {
@@ -98,10 +98,13 @@ object SoundSeeds {
     fun populateInitialSounds(context: Context): List<Sound> {
         val sounds = listOf(
             Triple("Bird", "bird", "bird"),
-            Triple("Cricket", "crickets", "cricket"),  // Note: audio = "crickets" but icon = "cricket"
+            Triple("Cricket", "cricket", "cricket"),  // Note: audio = "crickets" but icon = "cricket"
             Triple("Rain", "rain", "rain"),
             Triple("Sea Waves", "sea", "sea"),
-            Triple("Thunderstorm", "thunder", "thunder")
+            Triple("Thunderstorm", "thunder", "thunder"),
+            Triple("Firewood", "firewood", "firewood"),
+            Triple("Frog", "frog", "frog"),
+            Triple("River", "river", "river")
         )
 
         return sounds.mapIndexed { index, (name, rawFileName, drawableFileName) ->
