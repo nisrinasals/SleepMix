@@ -16,24 +16,23 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // CRITICAL: Check and seed if needed
+        // MainActivity.kt - onCreate()
         lifecycleScope.launch {
-            try {
-                val soundRepository = AplikasiSleepMix.container.soundRepository
-                val existingSounds = soundRepository.getAllSounds()
+            val soundRepository = AplikasiSleepMix.container.soundRepository
+            val sounds = soundRepository.getAllSounds()
 
-                Log.d("MainActivity", "Checking sounds: ${existingSounds.size} found")
+            Log.d("MainActivity", "=== DATABASE CHECK ===")
+            Log.d("MainActivity", "Total sounds in DB: ${sounds.size}")
 
-                if (existingSounds.isEmpty()) {
-                    Log.d("MainActivity", "Database empty, force seeding...")
-                    val sounds = SoundSeeds.populateInitialSounds(applicationContext)
-                    soundRepository.insertAllSounds(sounds)
-                    Log.d("MainActivity", "✅ Seeded ${sounds.size} sounds")
-                } else {
-                    Log.d("MainActivity", "✅ Sounds already exist")
-                }
-            } catch (e: Exception) {
-                Log.e("MainActivity", "❌ Error checking/seeding sounds", e)
+            sounds.forEach { sound ->
+                Log.d("MainActivity", "Sound: ${sound.name}, ID: ${sound.soundId}, Path: ${sound.filePath}")
+            }
+
+            if (sounds.isEmpty()) {
+                Log.e("MainActivity", "❌ DATABASE EMPTY! Force seeding...")
+                val initialSounds = SoundSeeds.populateInitialSounds(applicationContext)
+                soundRepository.insertAllSounds(initialSounds)
+                Log.d("MainActivity", "✅ Seeded ${initialSounds.size} sounds")
             }
         }
 

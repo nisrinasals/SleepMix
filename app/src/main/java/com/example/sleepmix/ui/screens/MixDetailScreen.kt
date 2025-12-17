@@ -22,6 +22,11 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * PAGE7: Mix Detail Screen
+ * FIXED: Volume sliders are now READ-ONLY (locked)
+ * Volume can only be changed via PAGE9 (EditVolumeScreen)
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MixDetailScreen(
@@ -58,7 +63,7 @@ fun MixDetailScreen(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete Mix?") },
-            text = { Text("Are you sure?") },
+            text = { Text("Are u sure?") },  // Per SRS
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -71,12 +76,12 @@ fun MixDetailScreen(
                         }
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text("Yes", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text("No")
                 }
             }
         )
@@ -135,6 +140,7 @@ fun MixDetailScreen(
                 Column(
                     modifier = Modifier.fillMaxSize().padding(paddingValues)
                 ) {
+                    // Play/Pause Card
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         colors = CardDefaults.cardColors(
@@ -184,13 +190,12 @@ fun MixDetailScreen(
                     ) {
                         items(mixWithSounds.sounds) { mixSound ->
                             val sound = soundMap[mixSound.soundId]
-                            MixSoundCard(
+
+                            // FIXED: Sliders are now READ-ONLY (locked)
+                            MixSoundCardLocked(
                                 mixSound = mixSound,
                                 soundName = sound?.name ?: "Unknown",
-                                soundIcon = sound?.iconRes ?: android.R.drawable.ic_media_play,
-                                onVolumeChange = { newVolume ->
-                                    viewModel.updateMixSoundVolume(mixSound, newVolume)
-                                }
+                                soundIcon = sound?.iconRes ?: android.R.drawable.ic_media_play
                             )
                         }
                     }
@@ -200,16 +205,21 @@ fun MixDetailScreen(
     }
 }
 
+/**
+ * FIXED: Read-only sound card with LOCKED slider
+ * Volume cannot be changed here - only via EditVolumeScreen (PAGE9)
+ */
 @Composable
-fun MixSoundCard(
+fun MixSoundCardLocked(
     mixSound: MixSound,
     soundName: String,
-    soundIcon: Int,
-    onVolumeChange: (Float) -> Unit
+    soundIcon: Int
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -223,38 +233,72 @@ fun MixSoundCard(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = soundName,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = soundName,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Volume: ${(mixSound.volumeLevel * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Lock icon to indicate read-only
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Locked",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // FIXED: Read-only slider (disabled, not interactive)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = if (mixSound.volumeLevel == 0f) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                    imageVector = if (mixSound.volumeLevel == 0f)
+                        Icons.Default.VolumeOff
+                    else
+                        Icons.Default.VolumeUp,
                     contentDescription = "Volume",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
+
+                // LOCKED SLIDER: enabled = false (read-only)
                 Slider(
                     value = mixSound.volumeLevel,
-                    onValueChange = onVolumeChange,
+                    onValueChange = { /* DO NOTHING - LOCKED */ },
                     modifier = Modifier.weight(1f),
-                    valueRange = 0f..1f
+                    valueRange = 0f..1f,
+                    enabled = false  // CRITICAL: Disabled = locked
                 )
+
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "${(mixSound.volumeLevel * 100).toInt()}%",
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.width(48.dp)
+                    modifier = Modifier.width(48.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Info text
+            Text(
+                text = "💡 To adjust volume, use Edit Mix → Click sound",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
         }
     }
 }
