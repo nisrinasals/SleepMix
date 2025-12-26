@@ -145,7 +145,8 @@ class SoundDetailViewModel(
     }
 
     override fun onCleared() {
-        stopSound()
+        Log.d("SoundDetailVM", "🧹 onCleared - cleaning up")
+        stopSound()  // ✅ Releases MediaPlayer
         super.onCleared()
     }
 }

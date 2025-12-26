@@ -156,7 +156,8 @@ class BrowseSoundViewModel(
     }
 
     override fun onCleared() {
-        stopPreview()
+        Log.d("BrowseSound", "🧹 onCleared - cleaning up")
+        stopPreview()  // ✅ Releases MediaPlayer
         super.onCleared()
     }
 }

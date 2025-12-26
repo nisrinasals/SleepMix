@@ -9,27 +9,13 @@ class AudioController(private val context: Context) {
 
     private val activePlayers = mutableMapOf<Int, MediaPlayer>()
 
-    fun toggleSound(mixSound: MixSound, soundFilePath: String) {
-        val mixSoundId = mixSound.mixSoundId
-
-        if (activePlayers.containsKey(mixSoundId)) {
-            stopSound(mixSoundId)
-        } else {
-            startSound(mixSound, soundFilePath)
-        }
-    }
-
-    /**
-     * CRITICAL FIX: Use MediaPlayer.create() for reliability
-     */
     fun startSound(mixSound: MixSound, soundFilePath: String) {
         val mixSoundId = mixSound.mixSoundId
 
-        Log.d("AudioController", "startSound: mixSoundId=$mixSoundId, path=$soundFilePath")
+        Log.d("AudioController", "startSound: mixSoundId=$mixSoundId")
 
         try {
             // Extract resource ID from path
-            // Format: "android.resource://com.example.sleepmix/2131689472"
             val resourceId = soundFilePath.substringAfterLast("/").toIntOrNull()
 
             if (resourceId == null || resourceId == 0) {
@@ -39,7 +25,7 @@ class AudioController(private val context: Context) {
 
             Log.d("AudioController", "Using resource ID: $resourceId")
 
-            // Use MediaPlayer.create() - more reliable
+            // Create MediaPlayer
             val player = MediaPlayer.create(context, resourceId)
 
             if (player == null) {
@@ -51,21 +37,39 @@ class AudioController(private val context: Context) {
                 // Set volume
                 val volume = mixSound.volumeLevel.coerceIn(0f, 1f)
                 setVolume(volume, volume)
-                Log.d("AudioController", "Volume set to: $volume")
 
                 // Set looping
                 isLooping = true
 
-                // Error listener
+                // ✅ CRITICAL: Error listener
                 setOnErrorListener { mp, what, extra ->
                     Log.e("AudioController", "MediaPlayer error: what=$what, extra=$extra")
                     stopSound(mixSoundId)
-                    false
+                    true  // Return true = error handled
+                }
+
+                // ✅ CRITICAL: Completion listener (shouldn't trigger with looping, but safety)
+                setOnCompletionListener {
+                    Log.d("AudioController", "Sound completed: $mixSoundId")
+                    stopSound(mixSoundId)
                 }
 
                 // Start playback
                 start()
                 Log.d("AudioController", "✅ Sound started: $mixSoundId")
+            }
+
+            // ✅ CRITICAL: Release old player if exists
+            activePlayers[mixSoundId]?.let { oldPlayer ->
+                try {
+                    if (oldPlayer.isPlaying) {
+                        oldPlayer.stop()
+                    }
+                    oldPlayer.release()
+                    Log.d("AudioController", "Released old player for: $mixSoundId")
+                } catch (e: Exception) {
+                    Log.e("AudioController", "Error releasing old player", e)
+                }
             }
 
             activePlayers[mixSoundId] = player
@@ -82,7 +86,8 @@ class AudioController(private val context: Context) {
                 if (player.isPlaying) {
                     player.stop()
                 }
-                player.release()
+                player.release()  // ✅ CRITICAL: Always release!
+                Log.d("AudioController", "✅ Released player: $mixSoundId")
             } catch (e: Exception) {
                 Log.e("AudioController", "Error stopping sound", e)
             }
@@ -91,23 +96,35 @@ class AudioController(private val context: Context) {
 
     fun stopAllPlayers() {
         Log.d("AudioController", "Stopping all players (${activePlayers.size} active)")
-        activePlayers.values.forEach { player ->
+
+        // ✅ Create copy to avoid ConcurrentModificationException
+        val playersToStop = activePlayers.values.toList()
+        activePlayers.clear()
+
+        playersToStop.forEach { player ->
             try {
                 if (player.isPlaying) {
                     player.stop()
                 }
-                player.release()
+                player.release()  // ✅ CRITICAL: Always release!
             } catch (e: Exception) {
                 Log.e("AudioController", "Error in stopAllPlayers", e)
             }
         }
-        activePlayers.clear()
+
+        Log.d("AudioController", "✅ All players released")
     }
 
     fun setVolume(mixSoundId: Int, volumeLevel: Float) {
         val volume = volumeLevel.coerceIn(0f, 1f)
-        activePlayers[mixSoundId]?.setVolume(volume, volume)
-        Log.d("AudioController", "Volume updated: mixSoundId=$mixSoundId, volume=$volume")
+        activePlayers[mixSoundId]?.let { player ->
+            try {
+                player.setVolume(volume, volume)
+                Log.d("AudioController", "Volume updated: mixSoundId=$mixSoundId, volume=$volume")
+            } catch (e: Exception) {
+                Log.e("AudioController", "Error setting volume", e)
+            }
+        }
     }
 
     fun isPlaying(mixSoundId: Int): Boolean {
@@ -116,5 +133,13 @@ class AudioController(private val context: Context) {
 
     fun getActivePlayersCount(): Int {
         return activePlayers.size
+    }
+
+    /**
+     * ✅ NEW: Cleanup method to call from Service onDestroy
+     */
+    fun cleanup() {
+        Log.d("AudioController", "🧹 Cleanup called")
+        stopAllPlayers()
     }
 }

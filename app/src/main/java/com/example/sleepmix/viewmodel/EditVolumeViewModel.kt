@@ -210,7 +210,8 @@ class EditVolumeViewModel(
     }
 
     override fun onCleared() {
-        stopPreview()
+        Log.d("EditVolumeVM", "🧹 onCleared - cleaning up")
+        stopPreview()  // ✅ Releases MediaPlayer
         super.onCleared()
     }
 }

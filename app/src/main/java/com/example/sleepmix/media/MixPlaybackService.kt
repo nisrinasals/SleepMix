@@ -91,13 +91,24 @@ class MixPlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         Log.d("MixPlaybackService", "🔴 onDestroy called")
-        serviceScope.cancel()
+
+        // ✅ CRITICAL: Stop and cleanup audio first
         audioController.stopAllPlayers()
+        audioController.cleanup()
+
+        // Cancel coroutines
+        serviceScope.cancel()
+
+        // Release media session
         mediaSession?.run {
             release()
             mediaSession = null
         }
+
+        // Release dummy player
         dummyPlayer.release()
+
+        Log.d("MixPlaybackService", "✅ Service cleaned up")
         super.onDestroy()
     }
 
