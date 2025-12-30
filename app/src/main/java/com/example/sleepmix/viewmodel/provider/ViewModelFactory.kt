@@ -7,7 +7,40 @@ import com.example.sleepmix.repositori.SoundRepository
 import com.example.sleepmix.repositori.UserRepository
 import com.example.sleepmix.viewmodel.*
 
-class RegistrasiViewModelFactory(private val userRepository: UserRepository) : ViewModelProvider.Factory {
+/**
+ * ViewModelFactory untuk semua ViewModel
+ * Sesuai SRS - menyediakan dependency injection untuk ViewModels
+ */
+
+// NEW: HomeViewModelFactory untuk Home Screen (Sound Library)
+class HomeViewModelFactory(
+    private val soundRepository: SoundRepository
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return HomeViewModel(soundRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+// NEW: SelectSoundViewModelFactory untuk PAGE10
+class SelectSoundViewModelFactory(
+    private val soundRepository: SoundRepository
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(SelectSoundViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return SelectSoundViewModel(soundRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class RegistrasiViewModelFactory(
+    private val userRepository: UserRepository
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(RegistrasiViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
@@ -17,7 +50,9 @@ class RegistrasiViewModelFactory(private val userRepository: UserRepository) : V
     }
 }
 
-class LoginViewModelFactory(private val userRepository: UserRepository) : ViewModelProvider.Factory {
+class LoginViewModelFactory(
+    private val userRepository: UserRepository
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
@@ -99,7 +134,6 @@ class EditMixViewModelFactory(
     }
 }
 
-// NEW: EditVolumeViewModelFactory for PAGE9
 class EditVolumeViewModelFactory(
     private val mixRepository: MixRepository,
     private val soundRepository: SoundRepository
@@ -116,7 +150,6 @@ class EditVolumeViewModelFactory(
     }
 }
 
-// NEW: SoundDetailViewModelFactory for PAGE5
 class SoundDetailViewModelFactory(
     private val soundRepository: SoundRepository
 ) : ViewModelProvider.Factory {
