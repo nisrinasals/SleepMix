@@ -9,5 +9,7 @@ data class Sound(
     val soundId : Int = 0,
     val name : String,
     val filePath : String,
-    val iconRes : Int
+    val iconRes : Int,
+    val category: String = "",
+    val duration: Int = 0
 )

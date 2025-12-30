@@ -22,5 +22,6 @@ data class Mix(
     val mixId : Int = 0,
     val userId : Int,
     val creationDate : Long,
-    val mixName : String
+    val mixName : String,
+    val lastModified: Long = 0
 )
