@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * UI State untuk Edit Mix Screen (PAGE8)
+ */
 data class EditMixUiState(
     val originalMixId: Int = 0,
     val availableSounds: List<Sound> = emptyList(),
@@ -26,6 +29,10 @@ data class EditMixUiState(
     val errorMessage: String? = null
 )
 
+/**
+ * ViewModel untuk PAGE8: Edit Mix Screen
+ * Sesuai SRS Section 3.4 MyMix Management
+ */
 class EditMixViewModel(
     private val mixRepository: MixRepository,
     private val soundRepository: SoundRepository
@@ -79,10 +86,18 @@ class EditMixViewModel(
         }
     }
 
+    /**
+     * Update mix name
+     * REQ-4.3: maksimal 30 karakter
+     */
     fun updateMixName(name: String) {
-        _uiState.update { it.copy(mixNameInput = name) }
+        _uiState.update { it.copy(mixNameInput = name, errorMessage = null) }
     }
 
+    /**
+     * Toggle sound selection
+     * REQ-2.4: Prevent duplicate
+     */
     fun toggleSoundSelection(sound: Sound) {
         _uiState.update { currentState ->
             val isSelected = currentState.selectedMixSounds.any { it.soundId == sound.soundId }
@@ -90,6 +105,12 @@ class EditMixViewModel(
             val newSelectedSounds = if (isSelected) {
                 currentState.selectedMixSounds.filter { it.soundId != sound.soundId }
             } else {
+                // REQ-2.1: Max 5 sounds
+                if (currentState.selectedMixSounds.size >= 5) {
+                    return@update currentState.copy(
+                        errorMessage = "Maksimal 5 suara per mix"
+                    )
+                }
                 currentState.selectedMixSounds + SelectedMixSound(
                     soundId = sound.soundId,
                     name = sound.name,
@@ -97,10 +118,50 @@ class EditMixViewModel(
                     volumeLevel = 0.5f
                 )
             }
-            currentState.copy(selectedMixSounds = newSelectedSounds)
+            currentState.copy(selectedMixSounds = newSelectedSounds, errorMessage = null)
         }
     }
 
+    /**
+     * Add sound dengan volume tertentu (dari PAGE11)
+     * REQ-2.4: Prevent duplicate
+     * REQ-2.1: Max 5 sounds
+     */
+    fun addSoundWithVolume(soundId: Int, volumeLevel: Float) {
+        viewModelScope.launch {
+            val sound = soundRepository.getSoundById(soundId) ?: return@launch
+
+            _uiState.update { currentState ->
+                // Check duplicate
+                if (currentState.selectedMixSounds.any { it.soundId == soundId }) {
+                    return@update currentState.copy(
+                        errorMessage = "Suara sudah ada dalam mix"
+                    )
+                }
+
+                // Check max limit
+                if (currentState.selectedMixSounds.size >= 5) {
+                    return@update currentState.copy(
+                        errorMessage = "Maksimal 5 suara per mix"
+                    )
+                }
+
+                val newSelectedSounds = currentState.selectedMixSounds + SelectedMixSound(
+                    soundId = sound.soundId,
+                    name = sound.name,
+                    iconRes = sound.iconRes,
+                    volumeLevel = volumeLevel
+                )
+
+                currentState.copy(selectedMixSounds = newSelectedSounds, errorMessage = null)
+            }
+        }
+    }
+
+    /**
+     * Update volume untuk sound yang dipilih
+     * REQ-3.1: independent volume control 0-100%
+     */
     fun updateSelectedSoundVolume(soundId: Int, newVolume: Float) {
         _uiState.update { currentState ->
             val updatedSounds = currentState.selectedMixSounds.map { selectedSound ->
@@ -114,16 +175,31 @@ class EditMixViewModel(
         }
     }
 
+    /**
+     * Save mix ke database
+     */
     fun saveMix() = viewModelScope.launch {
         _uiState.update { it.copy(isSaving = true, errorMessage = null) }
 
         val state = uiState.value
 
+        // Validasi
         if (state.mixNameInput.isBlank()) {
             _uiState.update {
                 it.copy(
                     isSaving = false,
                     errorMessage = "Mix name cannot be empty."
+                )
+            }
+            return@launch
+        }
+
+        // REQ-4.3: max 30 karakter
+        if (state.mixNameInput.length > 30) {
+            _uiState.update {
+                it.copy(
+                    isSaving = false,
+                    errorMessage = "Mix name maksimal 30 karakter."
                 )
             }
             return@launch
@@ -143,7 +219,8 @@ class EditMixViewModel(
             mixId = state.originalMixId,
             userId = state.userId,
             mixName = state.mixNameInput,
-            creationDate = state.creationDate
+            creationDate = state.creationDate,
+            lastModified = System.currentTimeMillis()  // Update lastModified
         )
 
         val updatedMixSounds = state.selectedMixSounds.map { selectedSound ->
@@ -165,5 +242,9 @@ class EditMixViewModel(
                 )
             }
         }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(errorMessage = null) }
     }
 }

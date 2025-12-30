@@ -33,9 +33,12 @@ import com.example.sleepmix.viewmodel.provider.CreateMixViewModelFactory
 @Composable
 fun CreateMixScreen(
     userId: Int,
+    pendingSoundId: Int? = null,      // Sound ID dari PAGE11
+    pendingVolume: Float? = null,      // Volume dari PAGE11
+    onPendingSoundConsumed: () -> Unit = {},  // Callback setelah sound dikonsumsi
     onNavigateBack: () -> Unit,
     onMixCreated: () -> Unit,
-    onNavigateToSelectSound: () -> Unit,  // NEW: Navigate ke PAGE10
+    onNavigateToSelectSound: (List<Int>) -> Unit,  // Navigate ke PAGE10 dengan excluded IDs
     viewModel: CreateMixViewModel = viewModel(
         factory = CreateMixViewModelFactory(
             mixRepository = AplikasiSleepMix.container.mixRepository,
@@ -44,6 +47,14 @@ fun CreateMixScreen(
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Handle pending sound dari PAGE11
+    LaunchedEffect(pendingSoundId, pendingVolume) {
+        if (pendingSoundId != null && pendingVolume != null) {
+            viewModel.addSoundWithVolume(pendingSoundId, pendingVolume)
+            onPendingSoundConsumed()
+        }
+    }
 
     // Handle save success
     LaunchedEffect(uiState.saveSuccess) {
@@ -71,7 +82,10 @@ fun CreateMixScreen(
             // REQ-2.4: Prevent duplicate & REQ-2.1: Max 5 sounds
             if (uiState.selectedMixSounds.size < 5) {
                 FloatingActionButton(
-                    onClick = onNavigateToSelectSound  // Navigate ke PAGE10
+                    onClick = {
+                        // Pass excluded sound IDs ke SelectSound screen
+                        onNavigateToSelectSound(uiState.selectedMixSounds.map { it.soundId })
+                    }
                 ) {
                     Icon(Icons.Default.Add, "Add Sound")
                 }

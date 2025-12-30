@@ -19,6 +19,9 @@ import com.example.sleepmix.ui.screens.*
 /**
  * Navigation Routes - Sesuai SRS Section 4.1
  */
+
+val selectedSoundsMap = mutableMapOf<Int, Float>()
+
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
@@ -79,9 +82,6 @@ sealed class Screen(val route: String) {
 fun SleepMixNavigation(
     navController: NavHostController = rememberNavController()
 ) {
-    // Temporary storage untuk selected sounds (dalam create/edit mix flow)
-    val selectedSoundsMap = remember { mutableStateMapOf<Int, Float>() }  // soundId -> volume
-
     NavHost(
         navController = navController,
         startDestination = Screen.Login.route
@@ -180,22 +180,36 @@ fun SleepMixNavigation(
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
 
+            // Get pending sound from savedStateHandle (passed from PAGE11)
+            val pendingSoundId = backStackEntry.savedStateHandle.get<Int>("pending_sound_id")
+            val pendingVolume = backStackEntry.savedStateHandle.get<Float>("pending_volume")
+
             CreateMixScreen(
                 userId = userId,
+                pendingSoundId = pendingSoundId,
+                pendingVolume = pendingVolume,
+                onPendingSoundConsumed = {
+                    // Clear setelah dikonsumsi
+                    backStackEntry.savedStateHandle.remove<Int>("pending_sound_id")
+                    backStackEntry.savedStateHandle.remove<Float>("pending_volume")
+                },
                 onNavigateBack = {
-                    selectedSoundsMap.clear()
                     navController.popBackStack()
                 },
                 onMixCreated = {
-                    selectedSoundsMap.clear()
                     navController.navigate(Screen.MyMixList.createRoute(userId)) {
                         popUpTo(Screen.Home.createRoute(userId)) {
                             inclusive = false
                         }
                     }
                 },
-                // NEW: Navigate to PAGE10 untuk add sound
-                onNavigateToSelectSound = {
+                // Navigate to PAGE10 dengan excluded IDs
+                onNavigateToSelectSound = { excludedIds ->
+                    // Store excluded IDs untuk diakses oleh SelectSound screen
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "excluded_sound_ids",
+                        excludedIds
+                    )
                     navController.navigate(Screen.SelectSound.createRoute(userId, false, 0))
                 }
             )
@@ -234,8 +248,18 @@ fun SleepMixNavigation(
             val mixId = backStackEntry.arguments?.getInt("mixId") ?: 0
             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
 
+            // Get pending sound from savedStateHandle (passed from PAGE11)
+            val pendingSoundId = backStackEntry.savedStateHandle.get<Int>("pending_sound_id")
+            val pendingVolume = backStackEntry.savedStateHandle.get<Float>("pending_volume")
+
             EditMixScreen(
                 mixId = mixId,
+                pendingSoundId = pendingSoundId,
+                pendingVolume = pendingVolume,
+                onPendingSoundConsumed = {
+                    backStackEntry.savedStateHandle.remove<Int>("pending_sound_id")
+                    backStackEntry.savedStateHandle.remove<Float>("pending_volume")
+                },
                 onNavigateBack = {
                     navController.popBackStack()
                 },
@@ -245,8 +269,12 @@ fun SleepMixNavigation(
                 onNavigateToEditVolume = { soundId ->
                     navController.navigate(Screen.EditVolume.createRoute(mixId, soundId))
                 },
-                // NEW: Navigate to PAGE10 untuk add sound
-                onNavigateToSelectSound = {
+                // Navigate to PAGE10 dengan excluded IDs
+                onNavigateToSelectSound = { excludedIds ->
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "excluded_sound_ids",
+                        excludedIds
+                    )
                     navController.navigate(Screen.SelectSound.createRoute(userId, true, mixId))
                 }
             )
@@ -288,8 +316,9 @@ fun SleepMixNavigation(
             val fromEdit = backStackEntry.arguments?.getBoolean("fromEdit") ?: false
             val mixId = backStackEntry.arguments?.getInt("mixId") ?: 0
 
-            // Get excluded sound IDs (already in mix)
-            val excludedIds = selectedSoundsMap.keys.toList()
+            // Get excluded sound IDs from previous screen's savedStateHandle
+            val excludedIds = navController.previousBackStackEntry?.savedStateHandle
+                ?.get<List<Int>>("excluded_sound_ids") ?: emptyList()
 
             SelectSoundScreen(
                 excludedSoundIds = excludedIds,
@@ -329,16 +358,20 @@ fun SleepMixNavigation(
                     navController.popBackStack()
                 },
                 onAddToMix = { sid, volume ->
-                    // Save to temporary map
-                    selectedSoundsMap[sid] = volume
-
-                    // Navigate back sesuai Activity Diagram:
-                    // BackToEdit? Yes -> EditMode, No -> CreateMix
                     if (fromEdit) {
-                        // Go back to Edit Mix (skip Select Sound)
+                        // For Edit Mix - pass via savedStateHandle to EditMix
+                        navController.previousBackStackEntry?.savedStateHandle?.set("pending_sound_id", sid)
+                        navController.previousBackStackEntry?.savedStateHandle?.set("pending_volume", volume)
+                        // Pop both SetVolume and SelectSound screens
                         navController.popBackStack(Screen.EditMix.createRoute(mixId, userId), false)
                     } else {
-                        // Go back to Create Mix (skip Select Sound)
+                        // For Create Mix - pass via savedStateHandle to CreateMix
+                        // First, get the CreateMix backstack entry
+                        navController.getBackStackEntry(Screen.CreateMix.createRoute(userId)).savedStateHandle.apply {
+                            set("pending_sound_id", sid)
+                            set("pending_volume", volume)
+                        }
+                        // Pop both SetVolume and SelectSound screens
                         navController.popBackStack(Screen.CreateMix.createRoute(userId), false)
                     }
                 }
