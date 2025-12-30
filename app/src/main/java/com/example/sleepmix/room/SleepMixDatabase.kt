@@ -11,6 +11,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+/**
+ * SleepMix Database - Sesuai SRS Section 4.3
+ * Version 4: Updated schema dengan category, duration, lastModified
+ */
 @Database(
     entities = [
         User::class,
@@ -18,7 +22,7 @@ import kotlinx.coroutines.launch
         Mix::class,
         MixSound::class
     ],
-    version = 3,  // INCREASED VERSION untuk force re-create
+    version = 4,  // INCREASED VERSION untuk schema update
     exportSchema = false
 )
 abstract class SleepMixDatabase : RoomDatabase() {
@@ -63,7 +67,7 @@ abstract class SleepMixDatabase : RoomDatabase() {
 
                     Log.d("Database", "Inserting ${initialSounds.size} sounds")
                     initialSounds.forEach { sound ->
-                        Log.d("Database", "Sound: ${sound.name}, Path: ${sound.filePath}, Icon: ${sound.iconRes}")
+                        Log.d("Database", "Sound: ${sound.name}, Category: ${sound.category}, Duration: ${sound.duration}s")
                     }
 
                     soundDao.insertAll(initialSounds)
@@ -77,6 +81,10 @@ abstract class SleepMixDatabase : RoomDatabase() {
     }
 }
 
+/**
+ * SoundSeeds - Data suara bawaan
+ * Sesuai SRS REQ-1.1: "Sistem harus menyediakan minimal 8 jenis suara alam berbeda"
+ */
 object SoundSeeds {
     /**
      * Get resource ID from raw folder
@@ -93,35 +101,47 @@ object SoundSeeds {
     }
 
     /**
-     * Populate initial sounds dengan file path yang BENAR
+     * Populate initial sounds - Sesuai SRS Section 4.3
+     * Dengan category dan duration sesuai schema baru
      */
     fun populateInitialSounds(context: Context): List<Sound> {
+        // Format: (name, rawFileName, drawableFileName, category, durationSeconds)
         val sounds = listOf(
-            Triple("Bird", "bird", "bird"),
-            Triple("Cricket", "cricket", "cricket"),  // Note: audio = "crickets" but icon = "cricket"
-            Triple("Rain", "rain", "rain"),
-            Triple("Sea Waves", "sea", "sea"),
-            Triple("Thunderstorm", "thunder", "thunder"),
-            Triple("Firewood", "firewood", "firewood"),
-            Triple("Frog", "frog", "frog"),
-            Triple("River", "river", "river")
+            SoundData("Bird", "bird", "bird", "Nature", 60),
+            SoundData("Cricket", "cricket", "cricket", "Nature", 60),
+            SoundData("Rain", "rain", "rain", "Weather", 60),
+            SoundData("Sea Waves", "sea", "sea", "Nature", 60),
+            SoundData("Thunderstorm", "thunder", "thunder", "Weather", 60),
+            SoundData("Firewood", "firewood", "firewood", "Ambience", 60),
+            SoundData("Frog", "frog", "frog", "Nature", 60),
+            SoundData("River", "river", "river", "Nature", 60)
         )
 
-        return sounds.mapIndexed { index, (name, rawFileName, drawableFileName) ->
-            val rawResId = getRawResourceId(context, rawFileName)
-            val drawableResId = getDrawableResourceId(context, drawableFileName)
+        return sounds.mapIndexed { index, soundData ->
+            val rawResId = getRawResourceId(context, soundData.rawFileName)
+            val drawableResId = getDrawableResourceId(context, soundData.drawableFileName)
 
-            // CRITICAL FIX: Use correct URI format
-            // Format LAMA (SALAH): "android.resource://package/resId"
-            // Format BARU (BENAR): "android.resource://package/raw/resId"
             val filePath = "android.resource://${context.packageName}/${rawResId}"
 
             Sound(
                 soundId = index + 1,
-                name = name,
+                name = soundData.name,
                 filePath = filePath,
-                iconRes = drawableResId
+                iconRes = drawableResId,
+                category = soundData.category,
+                duration = soundData.duration
             )
         }
     }
+
+    /**
+     * Helper data class untuk sound initialization
+     */
+    private data class SoundData(
+        val name: String,
+        val rawFileName: String,
+        val drawableFileName: String,
+        val category: String,
+        val duration: Int
+    )
 }
