@@ -15,19 +15,28 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sleepmix.repositori.AplikasiSleepMix
-import com.example.sleepmix.room.Sound
-import com.example.sleepmix.ui.components.AvailableSoundItem
 import com.example.sleepmix.viewmodel.EditMixViewModel
 import com.example.sleepmix.viewmodel.provider.EditMixViewModelFactory
 import com.example.sleepmix.viewmodel.SelectedMixSound
 
+/**
+ * PAGE8: Edit Mix Screen
+ * Sesuai SRS Section 4.1 Screen 8:
+ * - Header: Text "MyMix" (left), Back button ←
+ * - Content Area: Mix name input, Sounds list (display added sounds with Icon + Name)
+ * - FAB "+" untuk menambah mix (navigate ke PAGE10)
+ *
+ * Flow sesuai Activity Diagram:
+ * MixDetail → EditMix → EditAction (Edit Name / Click Sound / Add Sound)
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditMixScreen(
     mixId: Int,
     onNavigateBack: () -> Unit,
     onSaveSuccess: () -> Unit,
-    onNavigateToEditVolume: (Int) -> Unit,  // NEW: Navigate to PAGE9
+    onNavigateToEditVolume: (Int) -> Unit,  // Navigate ke PAGE9
+    onNavigateToSelectSound: () -> Unit,     // NEW: Navigate ke PAGE10
     viewModel: EditMixViewModel = viewModel(
         factory = EditMixViewModelFactory(
             mixRepository = AplikasiSleepMix.container.mixRepository,
@@ -50,26 +59,27 @@ fun EditMixScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit Mix") },
+                title = { Text("MyMix") },  // Sesuai SRS
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
-                    }
-                },
-                actions = {
-                    TextButton(
-                        onClick = { viewModel.saveMix() },
-                        enabled = !uiState.isLoading &&
-                                uiState.mixNameInput.isNotBlank() &&
-                                uiState.selectedMixSounds.isNotEmpty()
-                    ) {
-                        Text("Save")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             )
+        },
+        // FAB "+" untuk menambah sound - Sesuai SRS
+        floatingActionButton = {
+            // REQ-2.1: Max 5 sounds
+            if (uiState.selectedMixSounds.size < 5) {
+                FloatingActionButton(
+                    onClick = onNavigateToSelectSound  // Navigate ke PAGE10
+                ) {
+                    Icon(Icons.Default.Add, "Add Sound")
+                }
+            }
         }
     ) { paddingValues ->
         when {
@@ -90,12 +100,21 @@ fun EditMixScreen(
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
-                    // Mix Name Input
+                    // Mix Name Input - Sesuai SRS
+                    // REQ-4.3: maksimal 30 karakter
                     OutlinedTextField(
                         value = uiState.mixNameInput,
-                        onValueChange = { viewModel.updateMixName(it) },
+                        onValueChange = { newValue ->
+                            // Validasi max 30 karakter sesuai SRS REQ-4.3
+                            if (newValue.length <= 30) {
+                                viewModel.updateMixName(newValue)
+                            }
+                        },
                         label = { Text("Mix Name") },
                         leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                        supportingText = {
+                            Text("${uiState.mixNameInput.length}/30")
+                        },
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -122,10 +141,10 @@ fun EditMixScreen(
                         }
                     }
 
-                    // Selected Sounds Section
+                    // Sounds Section - Sesuai SRS
                     if (uiState.selectedMixSounds.isNotEmpty()) {
                         Text(
-                            text = "Selected Sounds (${uiState.selectedMixSounds.size})",
+                            text = "Sounds (${uiState.selectedMixSounds.size}/5)",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
@@ -136,46 +155,59 @@ fun EditMixScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(uiState.selectedMixSounds) { selectedSound ->
-                                SelectedSoundItemClickable(
+                                // Clickable sound card - navigate ke PAGE9
+                                EditMixSoundItemClickable(
                                     selectedSound = selectedSound,
                                     onClick = {
-                                        // NEW: Navigate to PAGE9 (EditVolume)
                                         onNavigateToEditVolume(selectedSound.soundId)
                                     }
                                 )
                             }
                         }
-
-                        Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    }
-
-                    // Available Sounds Section
-                    Text(
-                        text = "Available Sounds",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-
-                    LazyColumn(
-                        modifier = Modifier.weight(if (uiState.selectedMixSounds.isEmpty()) 1f else 0.6f),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(uiState.availableSounds) { sound ->
-                            val isSelected = uiState.selectedMixSounds.any { it.soundId == sound.soundId }
-                            AvailableSoundItem(
-                                sound = sound,
-                                isSelected = isSelected,
-                                onToggleSelection = { viewModel.toggleSoundSelection(sound) }
-                            )
+                    } else {
+                        // Empty state
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "No sounds in mix. Tap + to add.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
 
-                    // Loading indicator
-                    if (uiState.isSaving) {
-                        LinearProgressIndicator(
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    // Save Button
+                    Button(
+                        onClick = { viewModel.saveMix() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .height(56.dp),
+                        enabled = !uiState.isSaving &&
+                                uiState.mixNameInput.isNotBlank() &&
+                                uiState.selectedMixSounds.isNotEmpty()
+                    ) {
+                        if (uiState.isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text("Save", style = MaterialTheme.typography.titleMedium)
+                        }
                     }
                 }
             }
@@ -183,17 +215,22 @@ fun EditMixScreen(
     }
 }
 
+/**
+ * Clickable Sound Item untuk Edit Mix Screen
+ * Sesuai SRS: display added sounds with Icon + Name (horizontal layout)
+ * Click navigates to PAGE9 (Edit Volume)
+ */
 @Composable
-fun SelectedSoundItemClickable(
+fun EditMixSoundItemClickable(
     selectedSound: SelectedMixSound,
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),  // NEW: Clickable to navigate to PAGE9
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
     ) {
         Row(
@@ -202,15 +239,17 @@ fun SelectedSoundItemClickable(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Sound Icon - Sesuai SRS
             Icon(
                 painter = painterResource(id = selectedSound.iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
             )
 
             Spacer(modifier = Modifier.width(16.dp))
 
+            // Sound Name dan Volume info - Sesuai SRS
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = selectedSound.name,
@@ -222,14 +261,15 @@ fun SelectedSoundItemClickable(
                 Text(
                     text = "${(selectedSound.volumeLevel * 100).toInt()}% volume",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                 )
             }
 
+            // Arrow indicator untuk navigate ke PAGE9
             Icon(
                 Icons.Default.KeyboardArrowRight,
                 contentDescription = "Edit",
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
             )
         }
     }
